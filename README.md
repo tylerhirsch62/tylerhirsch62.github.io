@@ -1,5 +1,3 @@
-# Narrative Visualization Project for CS 416
-
 # Instructions
 ## Overview
 Create a narrative visualization implemented as an interactive web page, using your knowledge of visual communication and narrative structure, along with your skills at D3 programming in JavaScript. The narrative visualization should be implemented on a publicly visible website, such as github.io. See https://pages.github.com/ for instructions on how to use github to host a website. You will turn in this project by submitting the URL to the narrative visualization for grading, along with an essay describing how the interactive web page contains the elements of a narrative visualization and satisfies the requirements of this assignment.
