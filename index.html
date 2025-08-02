@@ -1,9 +1,292 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>My Site</title>
-  </head>
-  <body>
-    <h1>Hello from tylerhirsch62.github.io!</h1>
-  </body>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NASDAQ 100: A Journey Through Time</title>
+    
+    <!-- D3.js Library -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    
+    <!-- D3 Annotation Library -->
+    <script src="https://cdn.jsdelivr.net/npm/d3-annotation@2.5.1/build/d3-annotation.min.js"></script>
+    
+    <!-- TopoJSON Client -->
+    <script src="https://unpkg.com/topojson-client@3"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .visualization-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .control-group select,
+        .control-group button {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            background: white;
+            color: #495057;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .control-group select:hover,
+        .control-group button:hover {
+            border-color: #007bff;
+            box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+        }
+
+        .control-group button.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            border: 2px solid #dee2e6;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            font-size: 1.2rem;
+            color: #6c757d;
+        }
+
+        .annotation {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-size: 0.9rem;
+            max-width: 250px;
+        }
+        
+        .milestone-annotation {
+            transition: opacity 0.3s ease;
+        }
+        
+        .milestone-annotation:hover {
+            opacity: 0.9;
+        }
+        
+        .annotation-box {
+            pointer-events: all;
+        }
+
+        .annotation-title {
+            font-weight: 600;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .nav-button {
+            padding: 12px 24px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .nav-button:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        .nav-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-indicator {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .progress-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #dee2e6;
+            transition: all 0.3s ease;
+        }
+
+        .progress-dot.active {
+            background: #007bff;
+            transform: scale(1.2);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .chart-container {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>NASDAQ 100: A Journey Through Time</h1>
+            <p>Explore the evolution of the NASDAQ 100 from 2017 to 2025</p>
+        </div>
+
+        <div class="visualization-container">
+            <div class="controls">
+                <div class="control-group">
+                    <label for="timeframe">Timeframe:</label>
+                    <select id="timeframe">
+                        <option value="1Month">Monthly</option>
+                        <option value="1w">Weekly</option>
+                        <option value="1d">Daily</option>
+                        <option value="4h">4-Hour</option>
+                        <option value="1h">Hourly</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label for="chartType">Chart Type:</label>
+                    <select id="chartType">
+                        <option value="line">Line Chart</option>
+                        <option value="candlestick">Candlestick</option>
+                        <option value="area">Area Chart</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <button id="autoPlay" class="nav-button">Auto Play</button>
+                </div>
+            </div>
+
+            <div class="chart-container" id="chartContainer">
+                <div class="loading">Loading data...</div>
+            </div>
+
+            <div class="navigation">
+                <button id="prevScene" class="nav-button">← Previous</button>
+                
+                                       <div class="progress-indicator">
+                           <div class="progress-dot active" data-scene="1"></div>
+                           <div class="progress-dot" data-scene="2"></div>
+                           <div class="progress-dot" data-scene="3"></div>
+                           <div class="progress-dot" data-scene="4"></div>
+                           <div class="progress-dot" data-scene="5"></div>
+                           <div class="progress-dot" data-scene="6"></div>
+                       </div>
+                
+                <button id="nextScene" class="nav-button">Next →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main JavaScript -->
+    <script src="js/narrative.js"></script>
+</body>
 </html>

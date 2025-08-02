@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Data Loading Test</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <h1>Data Loading Test</h1>
+    <div id="status">Testing data loading...</div>
+    <div id="data"></div>
+
+    <script>
+        async function testDataLoading() {
+            const statusDiv = document.getElementById('status');
+            const dataDiv = document.getElementById('data');
+            
+            try {
+                // Test loading the monthly data
+                const response = await fetch('NASDAQ_100/1Month_data.csv');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const csvText = await response.text();
+                const rows = d3.tsvParse(csvText);
+                
+                statusDiv.innerHTML = `<p style="color: green;">✅ Data loaded successfully!</p>
+                                     <p>Found ${rows.length} data points</p>`;
+                
+                // Show first few rows
+                const sampleData = rows.slice(0, 5);
+                dataDiv.innerHTML = '<h3>Sample Data:</h3><pre>' + 
+                    JSON.stringify(sampleData, null, 2) + '</pre>';
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<p style="color: red;">❌ Error loading data: ${error.message}</p>
+                                     <p>Make sure you're running this through a web server (not opening the file directly)</p>
+                                     <p>Try running: python -m http.server 8000</p>
+                                     <p>Then visit: http://localhost:8000/test_data.html</p>`;
+                console.error('Error:', error);
+            }
+        }
+        
+        testDataLoading();
+    </script>
+</body>
+</html> 
