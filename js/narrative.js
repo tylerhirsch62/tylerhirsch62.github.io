@@ -278,8 +278,31 @@ class NarrativeVisualization {
         this.chart.select('.x-axis').call(this.xAxis);
         this.chart.select('.y-axis').call(this.yAxis);
         
-        // Clear existing chart
+        // Clear existing chart elements AND annotations
         this.chart.selectAll('.chart-element').remove();
+        this.chart.selectAll('.milestone-card').remove();
+        this.chart.selectAll('.submilestone').remove();
+        this.chart.selectAll('.chart-title').remove();
+        this.chart.selectAll('.summary-stats').remove();
+        this.chart.selectAll('.trend-analysis').remove();
+        this.chart.selectAll('.ma-legend').remove();
+        this.chart.selectAll('.future-outlook').remove();
+        this.chart.selectAll('.covid-summary').remove();
+        
+        // Additional cleanup for any remaining text elements that might be titles
+        this.chart.selectAll('text').filter(function() {
+            const text = d3.select(this).text();
+            return text && (text.includes('NASDAQ') || text.includes('COVID') || text.includes('Tech') || 
+                           text.includes('Market') || text.includes('AI') || text.includes('Future') ||
+                           text.includes('Overview') || text.includes('Crash') || text.includes('Peak') ||
+                           text.includes('Correction') || text.includes('Revolution') || text.includes('Outlook'));
+        }).remove();
+        
+        // Remove any text elements that are positioned near the top (likely titles)
+        this.chart.selectAll('text').filter(function() {
+            const y = d3.select(this).attr('y');
+            return y && parseInt(y) < 0; // Remove text positioned above the chart area
+        }).remove();
         
         // Draw chart based on type
         switch (this.currentChartType) {
@@ -471,6 +494,27 @@ class NarrativeVisualization {
         d3.select('#timeframe').property('value', '1d');
         d3.select('#chartType').property('value', 'candlestick');
         this.loadData();
+        
+        // Ensure we're showing the COVID period data
+        const covidData = this.currentData.filter(d => 
+            d.date.getFullYear() === 2020 && 
+            d.date.getMonth() >= 2 && d.date.getMonth() <= 5);
+        
+        if (covidData.length > 0) {
+            // Update scales for COVID period
+            this.xScale.domain(d3.extent(covidData, d => d.date));
+            const yMin = d3.min(covidData, d => d.low);
+            const yMax = d3.max(covidData, d => d.high);
+            const yRange = yMax - yMin;
+            this.yScale.domain([
+                yMin - (yRange * 0.1),
+                yMax + (yRange * 0.1)
+            ]);
+            
+            // Update axes
+            this.chart.select('.x-axis').call(this.xAxis);
+            this.chart.select('.y-axis').call(this.yAxis);
+        }
     }
     
     setupScene3() {
@@ -856,7 +900,7 @@ class NarrativeVisualization {
                 description: 'January 2023: AI technologies drive massive growth in tech stocks, particularly AI-related companies.',
                 color: '#28a745',
                 type: 'boom',
-                position: { x: -250, y: 100 } // Easy to adjust position
+                position: { x: -50, y: 30 } // Easy to adjust position
             });
         }
         
@@ -890,16 +934,6 @@ class NarrativeVisualization {
             .attr('class', 'card-box')
             .attr('transform', `translate(${offsetX}, ${offsetY})`);
         
-        // Card background
-        cardBox.append('rect')
-            .attr('width', 200)
-            .attr('height', 75)
-            .attr('rx', 6)
-            .attr('fill', 'rgba(255, 255, 255, 0.98)')
-            .attr('stroke', milestone.color)
-            .attr('stroke-width', 2)
-            .style('filter', 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))');
-        
         // Card title
         cardBox.append('text')
             .attr('x', 10)
@@ -921,9 +955,15 @@ class NarrativeVisualization {
         
         const dynamicHeight = titleHeight + (textLines * textLineHeight) + dateHeight + padding;
         
-        // Update card background with dynamic height
-        cardBox.select('rect')
-            .attr('height', dynamicHeight);
+        // Add card background with calculated height
+        cardBox.insert('rect', ':first-child') // Insert at the beginning so it's behind the text
+            .attr('width', 200)
+            .attr('height', dynamicHeight)
+            .attr('rx', 6)
+            .attr('fill', 'rgba(255, 255, 255, 0.98)')
+            .attr('stroke', milestone.color)
+            .attr('stroke-width', 2)
+            .style('filter', 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))');
         
         // Click hint
         cardBox.append('text')
@@ -948,70 +988,205 @@ class NarrativeVisualization {
     
     // Submilestone functions for detailed scenes
     addCovidSubmilestones() {
+        // Filter data to COVID period for more accurate data points
+        const covidData = this.currentData.filter(d => 
+            d.date.getFullYear() === 2020 && 
+            d.date.getMonth() >= 2 && d.date.getMonth() <= 5);
+        
         const submilestones = [
-            { date: new Date('2020-03-16'), title: 'Circuit Breakers Triggered', description: 'Multiple trading halts as markets crash' },
-            { date: new Date('2020-03-23'), title: 'Fed Announces QE', description: 'Unlimited quantitative easing begins' },
-            { date: new Date('2020-04-06'), title: 'Tech Recovery Begins', description: 'NASDAQ starts its recovery rally' }
+            { 
+                date: new Date('2020-03-16'), 
+                title: 'Circuit Breakers Triggered', 
+                description: 'Multiple trading halts as markets crash',
+                position: { x: -10, y: -60 } // Custom position relative to data point
+            },
+            { 
+                date: new Date('2020-03-23'), 
+                title: 'Fed Announces QE', 
+                description: 'Unlimited quantitative easing begins',
+                position: { x: -110, y: 20 } // Custom position relative to data point
+            },
+            { 
+                date: new Date('2020-04-06'), 
+                title: 'Tech Recovery Begins', 
+                description: 'NASDAQ starts its recovery rally',
+                position: { x: 50, y: -40 } // Custom position relative to data point
+            }
         ];
         
         submilestones.forEach(sub => {
-            const dataPoint = this.currentData.find(d => 
-                d.date.getTime() === sub.date.getTime());
+            // Find the closest data point to the milestone date
+            const dataPoint = covidData.find(d => 
+                Math.abs(d.date.getTime() - sub.date.getTime()) < 7 * 24 * 60 * 60 * 1000); // Within 7 days
+            
             if (dataPoint) {
-                this.addSubmilestone(dataPoint, sub.title, sub.description, '#dc3545');
+                this.addSubmilestone(dataPoint, sub.title, sub.description, '#dc3545', sub.position);
             }
         });
+        
+        // Add COVID summary (title is already added in addScene2Annotations)
+        this.addCovidSummary();
+    }
+    
+    addCovidSummary() {
+        // Filter to COVID period for calculations
+        const covidData = this.currentData.filter(d => 
+            d.date.getFullYear() === 2020 && 
+            d.date.getMonth() >= 2 && d.date.getMonth() <= 5);
+        
+        if (covidData.length === 0) return;
+        
+        const startValue = covidData[0].close;
+        const endValue = covidData[covidData.length - 1].close;
+        const minValue = d3.min(covidData, d => d.low);
+        const maxValue = d3.max(covidData, d => d.high);
+        const totalChange = ((endValue - startValue) / startValue * 100).toFixed(1);
+        const maxDrop = ((minValue - startValue) / startValue * 100).toFixed(1);
+        
+        // Add COVID summary box
+        const summaryGroup = this.chart.append('g')
+            .attr('class', 'covid-summary')
+            .attr('transform', `translate(10, 20)`);
+        
+        summaryGroup.append('rect')
+            .attr('width', 160)
+            .attr('height', 80)
+            .attr('rx', 5)
+            .attr('fill', 'rgba(255, 255, 255, 0.95)')
+            .attr('stroke', '#dc3545')
+            .attr('stroke-width', 2);
+        
+        summaryGroup.append('text')
+            .attr('x', 10)
+            .attr('y', 15)
+            .style('font-size', '11px')
+            .style('font-weight', 'bold')
+            .style('fill', '#dc3545')
+            .text('COVID-19 Impact:');
+        
+        summaryGroup.append('text')
+            .attr('x', 10)
+            .attr('y', 30)
+            .style('font-size', '9px')
+            .style('fill', '#666')
+            .text(`Max Drop: ${maxDrop}%`);
+        
+        summaryGroup.append('text')
+            .attr('x', 10)
+            .attr('y', 43)
+            .style('font-size', '9px')
+            .style('fill', '#666')
+            .text(`Period Change: ${totalChange}%`);
+        
+        summaryGroup.append('text')
+            .attr('x', 10)
+            .attr('y', 56)
+            .style('font-size', '9px')
+            .style('fill', '#666')
+            .text(`Low: ${minValue.toLocaleString()}`);
+        
+        summaryGroup.append('text')
+            .attr('x', 10)
+            .attr('y', 69)
+            .style('font-size', '9px')
+            .style('fill', '#666')
+            .text(`High: ${maxValue.toLocaleString()}`);
     }
     
     addBoomSubmilestones() {
         const submilestones = [
-            { date: new Date('2021-01-01'), title: 'Stimulus Fuels Growth', description: 'Government stimulus drives tech boom' },
-            { date: new Date('2021-06-01'), title: 'Peak Valuations', description: 'Tech stocks reach record valuations' },
-            { date: new Date('2021-12-01'), title: 'All-Time High', description: 'NASDAQ reaches peak before correction' }
+            { 
+                date: new Date('2021-01-01'), 
+                title: 'Stimulus Fuels Growth', 
+                description: 'Government stimulus drives tech boom',
+                position: { x: 15, y: -25 }
+            },
+            { 
+                date: new Date('2021-06-01'), 
+                title: 'Peak Valuations', 
+                description: 'Tech stocks reach record valuations',
+                position: { x: -120, y: 20 }
+            },
+            { 
+                date: new Date('2021-12-01'), 
+                title: 'All-Time High', 
+                description: 'NASDAQ reaches peak before correction',
+                position: { x: 30, y: -35 }
+            }
         ];
         
         submilestones.forEach(sub => {
             const dataPoint = this.currentData.find(d => 
                 d.date.getFullYear() === 2021 && d.date.getMonth() === sub.date.getMonth());
             if (dataPoint) {
-                this.addSubmilestone(dataPoint, sub.title, sub.description, '#ffc107');
+                this.addSubmilestone(dataPoint, sub.title, sub.description, '#ffc107', sub.position);
             }
         });
     }
     
     addCorrectionSubmilestones() {
         const submilestones = [
-            { date: new Date('2022-01-01'), title: 'Rate Hike Fears', description: 'Fed signals aggressive rate increases' },
-            { date: new Date('2022-06-01'), title: 'Inflation Peak', description: 'Inflation reaches 40-year high' },
-            { date: new Date('2022-10-01'), title: 'Market Bottom', description: 'NASDAQ finds support level' }
+            { 
+                date: new Date('2022-01-01'), 
+                title: 'Rate Hike Fears', 
+                description: 'Fed signals aggressive rate increases',
+                position: { x: -140, y: 15 }
+            },
+            { 
+                date: new Date('2022-06-01'), 
+                title: 'Inflation Peak', 
+                description: 'Inflation reaches 40-year high',
+                position: { x: 20, y: -30 }
+            },
+            { 
+                date: new Date('2022-10-01'), 
+                title: 'Market Bottom', 
+                description: 'NASDAQ finds support level',
+                position: { x: -100, y: 25 }
+            }
         ];
         
         submilestones.forEach(sub => {
             const dataPoint = this.currentData.find(d => 
                 d.date.getFullYear() === 2022 && d.date.getMonth() === sub.date.getMonth());
             if (dataPoint) {
-                this.addSubmilestone(dataPoint, sub.title, sub.description, '#fd7e14');
+                this.addSubmilestone(dataPoint, sub.title, sub.description, '#fd7e14', sub.position);
             }
         });
     }
     
     addAISubmilestones() {
         const submilestones = [
-            { date: new Date('2023-01-01'), title: 'ChatGPT Launch', description: 'AI revolution begins with ChatGPT' },
-            { date: new Date('2023-06-01'), title: 'AI Stock Rally', description: 'AI companies surge in value' },
-            { date: new Date('2024-01-01'), title: 'AI Integration', description: 'AI becomes mainstream in tech' }
+            { 
+                date: new Date('2023-01-01'), 
+                title: 'ChatGPT Launch', 
+                description: 'AI revolution begins with ChatGPT',
+                position: { x: -130, y: -20 }
+            },
+            { 
+                date: new Date('2023-06-01'), 
+                title: 'AI Stock Rally', 
+                description: 'AI companies surge in value',
+                position: { x: 25, y: 15 }
+            },
+            { 
+                date: new Date('2024-01-01'), 
+                title: 'AI Integration', 
+                description: 'AI becomes mainstream in tech',
+                position: { x: -90, y: 30 }
+            }
         ];
         
         submilestones.forEach(sub => {
             const dataPoint = this.currentData.find(d => 
                 d.date.getFullYear() === sub.date.getFullYear() && d.date.getMonth() === sub.date.getMonth());
             if (dataPoint) {
-                this.addSubmilestone(dataPoint, sub.title, sub.description, '#28a745');
+                this.addSubmilestone(dataPoint, sub.title, sub.description, '#28a745', sub.position);
             }
         });
     }
     
-    addSubmilestone(dataPoint, title, description, color) {
+    addSubmilestone(dataPoint, title, description, color, position = { x: 10, y: -5 }) {
         const annotation = this.chart.append('g')
             .attr('class', 'submilestone')
             .attr('transform', `translate(${this.xScale(dataPoint.date)}, ${this.yScale(dataPoint.close)})`);
@@ -1023,10 +1198,10 @@ class NarrativeVisualization {
             .attr('stroke', 'white')
             .attr('stroke-width', 2);
         
-        // Simple label
+        // Simple label with custom positioning
         annotation.append('text')
-            .attr('x', 10)
-            .attr('y', -5)
+            .attr('x', position.x)
+            .attr('y', position.y)
             .attr('class', 'submilestone-title')
             .style('font-size', '11px')
             .style('font-weight', 'bold')
@@ -1034,8 +1209,8 @@ class NarrativeVisualization {
             .text(title);
         
         annotation.append('text')
-            .attr('x', 10)
-            .attr('y', 8)
+            .attr('x', position.x)
+            .attr('y', position.y + 13)
             .attr('class', 'submilestone-description')
             .style('font-size', '10px')
             .style('fill', '#666')
