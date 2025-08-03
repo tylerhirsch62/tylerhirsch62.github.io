@@ -202,7 +202,7 @@ class NarrativeVisualization {
     async loadData() {
         try {
             console.log(`Attempting to load: NASDAQ_100/${this.currentTimeframe}_data.csv`);
-            const response = await fetch(`NASDAQ_100/${this.currentTimeframe}_data.csv`);
+            const response = await fetch(`../NASDAQ_100/${this.currentTimeframe}_data.csv`);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -998,28 +998,45 @@ class NarrativeVisualization {
                 date: new Date('2020-03-16'), 
                 title: 'Circuit Breakers Triggered', 
                 description: 'Multiple trading halts as markets crash',
-                position: { x: -10, y: -60 } // Custom position relative to data point
+                position: { x: -120, y: 25 } // Custom position relative to data point
             },
             { 
                 date: new Date('2020-03-23'), 
                 title: 'Fed Announces QE', 
                 description: 'Unlimited quantitative easing begins',
-                position: { x: -110, y: 20 } // Custom position relative to data point
+                position: { x: 15, y: 0 } // Custom position relative to data point
             },
             { 
                 date: new Date('2020-04-06'), 
                 title: 'Tech Recovery Begins', 
                 description: 'NASDAQ starts its recovery rally',
-                position: { x: 50, y: -40 } // Custom position relative to data point
+                position: { x: -20, y: -50 } // Custom position relative to data point
             }
         ];
         
         submilestones.forEach(sub => {
-            // Find the closest data point to the milestone date
-            const dataPoint = covidData.find(d => 
-                Math.abs(d.date.getTime() - sub.date.getTime()) < 7 * 24 * 60 * 60 * 1000); // Within 7 days
+            // Find the exact date or closest available date
+            let dataPoint = covidData.find(d => 
+                d.date.toDateString() === sub.date.toDateString());
+            
+            // If exact date not found, find the closest date within 3 days
+            if (!dataPoint) {
+                dataPoint = covidData.reduce((closest, current) => {
+                    const currentDiff = Math.abs(current.date.getTime() - sub.date.getTime());
+                    const closestDiff = Math.abs(closest.date.getTime() - sub.date.getTime());
+                    return currentDiff < closestDiff ? current : closest;
+                });
+                
+                // Only use if within 3 days
+                const daysDiff = Math.abs(dataPoint.date.getTime() - sub.date.getTime()) / (1000 * 60 * 60 * 24);
+                if (daysDiff > 3) {
+                    console.warn(`No data found within 3 days of ${sub.date.toDateString()}, closest was ${dataPoint.date.toDateString()}`);
+                    return; // Skip this submilestone
+                }
+            }
             
             if (dataPoint) {
+                console.log(`Adding submilestone "${sub.title}" at ${dataPoint.date.toDateString()}`);
                 this.addSubmilestone(dataPoint, sub.title, sub.description, '#dc3545', sub.position);
             }
         });
@@ -1094,93 +1111,156 @@ class NarrativeVisualization {
     }
     
     addBoomSubmilestones() {
+        const boomData = this.currentData.filter(d => d.date.getFullYear() === 2021);
+        
         const submilestones = [
             { 
-                date: new Date('2021-01-01'), 
+                date: new Date('2021-01-05'), 
                 title: 'Stimulus Fuels Growth', 
                 description: 'Government stimulus drives tech boom',
-                position: { x: 15, y: -25 }
+                position: { x: 5, y: 25 }
             },
             { 
                 date: new Date('2021-06-01'), 
                 title: 'Peak Valuations', 
                 description: 'Tech stocks reach record valuations',
-                position: { x: -120, y: 20 }
+                position: { x: -0, y: 30 }
             },
             { 
-                date: new Date('2021-12-01'), 
+                date: new Date('2021-11-22'), 
                 title: 'All-Time High', 
                 description: 'NASDAQ reaches peak before correction',
-                position: { x: 30, y: -35 }
+                position: { x: -50, y: -45 }
             }
         ];
         
         submilestones.forEach(sub => {
-            const dataPoint = this.currentData.find(d => 
-                d.date.getFullYear() === 2021 && d.date.getMonth() === sub.date.getMonth());
+            // Find the exact date or closest available date
+            let dataPoint = boomData.find(d => 
+                d.date.toDateString() === sub.date.toDateString());
+            
+            // If exact date not found, find the closest date within 3 days
+            if (!dataPoint) {
+                dataPoint = boomData.reduce((closest, current) => {
+                    const currentDiff = Math.abs(current.date.getTime() - sub.date.getTime());
+                    const closestDiff = Math.abs(closest.date.getTime() - sub.date.getTime());
+                    return currentDiff < closestDiff ? current : closest;
+                });
+                
+                // Only use if within 3 days
+                const daysDiff = Math.abs(dataPoint.date.getTime() - sub.date.getTime()) / (1000 * 60 * 60 * 24);
+                if (daysDiff > 3) {
+                    console.warn(`No data found within 3 days of ${sub.date.toDateString()}, closest was ${dataPoint.date.toDateString()}`);
+                    return; // Skip this submilestone
+                }
+            }
+            
             if (dataPoint) {
+                console.log(`Adding submilestone "${sub.title}" at ${dataPoint.date.toDateString()}`);
                 this.addSubmilestone(dataPoint, sub.title, sub.description, '#ffc107', sub.position);
             }
         });
     }
     
     addCorrectionSubmilestones() {
+        const correctionData = this.currentData.filter(d => d.date.getFullYear() === 2022);
+        
         const submilestones = [
             { 
                 date: new Date('2022-01-01'), 
                 title: 'Rate Hike Fears', 
                 description: 'Fed signals aggressive rate increases',
-                position: { x: -140, y: 15 }
+                position: { x: 10, y: -20 }
             },
             { 
                 date: new Date('2022-06-01'), 
                 title: 'Inflation Peak', 
                 description: 'Inflation reaches 40-year high',
-                position: { x: 20, y: -30 }
+                position: { x: -50, y: -30 }
             },
             { 
                 date: new Date('2022-10-01'), 
                 title: 'Market Bottom', 
                 description: 'NASDAQ finds support level',
-                position: { x: -100, y: 25 }
+                position: { x: -50, y: -30 }
             }
         ];
         
         submilestones.forEach(sub => {
-            const dataPoint = this.currentData.find(d => 
-                d.date.getFullYear() === 2022 && d.date.getMonth() === sub.date.getMonth());
+            // Find the exact date or closest available date
+            let dataPoint = correctionData.find(d => 
+                d.date.toDateString() === sub.date.toDateString());
+            
+            // If exact date not found, find the closest date within 3 days
+            if (!dataPoint) {
+                dataPoint = correctionData.reduce((closest, current) => {
+                    const currentDiff = Math.abs(current.date.getTime() - sub.date.getTime());
+                    const closestDiff = Math.abs(closest.date.getTime() - sub.date.getTime());
+                    return currentDiff < closestDiff ? current : closest;
+                });
+                
+                // Only use if within 3 days
+                const daysDiff = Math.abs(dataPoint.date.getTime() - sub.date.getTime()) / (1000 * 60 * 60 * 24);
+                if (daysDiff > 3) {
+                    console.warn(`No data found within 3 days of ${sub.date.toDateString()}, closest was ${dataPoint.date.toDateString()}`);
+                    return; // Skip this submilestone
+                }
+            }
+            
             if (dataPoint) {
+                console.log(`Adding submilestone "${sub.title}" at ${dataPoint.date.toDateString()}`);
                 this.addSubmilestone(dataPoint, sub.title, sub.description, '#fd7e14', sub.position);
             }
         });
     }
     
     addAISubmilestones() {
+        const aiData = this.currentData.filter(d => d.date.getFullYear() >= 2023);
+        
         const submilestones = [
             { 
                 date: new Date('2023-01-01'), 
                 title: 'ChatGPT Launch', 
                 description: 'AI revolution begins with ChatGPT',
-                position: { x: -130, y: -20 }
+                position: { x: 20, y: 0 }
             },
             { 
                 date: new Date('2023-06-01'), 
                 title: 'AI Stock Rally', 
                 description: 'AI companies surge in value',
-                position: { x: 25, y: 15 }
+                position: { x: 0, y: 20 }
             },
             { 
                 date: new Date('2024-01-01'), 
                 title: 'AI Integration', 
                 description: 'AI becomes mainstream in tech',
-                position: { x: -90, y: 30 }
+                position: { x: 0, y: 30 }
             }
         ];
         
         submilestones.forEach(sub => {
-            const dataPoint = this.currentData.find(d => 
-                d.date.getFullYear() === sub.date.getFullYear() && d.date.getMonth() === sub.date.getMonth());
+            // Find the exact date or closest available date
+            let dataPoint = aiData.find(d => 
+                d.date.toDateString() === sub.date.toDateString());
+            
+            // If exact date not found, find the closest date within 3 days
+            if (!dataPoint) {
+                dataPoint = aiData.reduce((closest, current) => {
+                    const currentDiff = Math.abs(current.date.getTime() - sub.date.getTime());
+                    const closestDiff = Math.abs(closest.date.getTime() - sub.date.getTime());
+                    return currentDiff < closestDiff ? current : closest;
+                });
+                
+                // Only use if within 3 days
+                const daysDiff = Math.abs(dataPoint.date.getTime() - sub.date.getTime()) / (1000 * 60 * 60 * 24);
+                if (daysDiff > 3) {
+                    console.warn(`No data found within 3 days of ${sub.date.toDateString()}, closest was ${dataPoint.date.toDateString()}`);
+                    return; // Skip this submilestone
+                }
+            }
+            
             if (dataPoint) {
+                console.log(`Adding submilestone "${sub.title}" at ${dataPoint.date.toDateString()}`);
                 this.addSubmilestone(dataPoint, sub.title, sub.description, '#28a745', sub.position);
             }
         });
